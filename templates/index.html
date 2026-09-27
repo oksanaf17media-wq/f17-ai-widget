@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F17 Media — Підбір стратегії та розрахунок</title>
+    <style>
+        body {
+            background-color: #0b0b0b;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 500px;
+            background: #141414;
+            border: 1px solid #222;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .chat-header {
+            padding: 20px;
+            border-bottom: 1px solid #222;
+            text-align: center;
+            font-weight: 600;
+            color: #d4af37;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .message {
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 80%;
+            line-height: 1.4;
+            font-size: 14px;
+        }
+        .message.user {
+            background: #d4af37;
+            color: #000;
+            align-self: flex-end;
+            font-weight: 500;
+        }
+        .message.ai {
+            background: #1f1f1f;
+            color: #fff;
+            align-self: flex-start;
+            border: 1px solid #333;
+        }
+        .chat-input-area {
+            padding: 15px;
+            border-top: 1px solid #222;
+            display: flex;
+            gap: 10px;
+        }
+        input {
+            flex: 1;
+            background: #1f1f1f;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+        input:focus {
+            border-color: #d4af37;
+        }
+        button {
+            background: #d4af37;
+            color: #000;
+            border: none;
+            padding: 0 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .whatsapp-btn {
+            display: block;
+            margin-top: 10px;
+            background: #25D366;
+            color: #fff;
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">F17 Media AI — Підбір рішення</div>
+    <div class="chat-messages" id="chatMessages">
+        <div class="message ai">Привіт! Я AI-ассистент F17 Media. Допоможу підібрати систему відеоконтенту під твої завдання і розрахувати точну вартість. Розкажи, чим займається твій бізнес і яка твоя ціль?</div>
+    </div>
+    <div class="chat-input-area">
+        <input type="text" id="userInput" placeholder="Напиши відповідь..." onkeydown="if(event.key==='Enter') sendMessage()">
+        <button onclick="sendMessage()">Надіслати</button>
+    </div>
+</div>
+
+<script>
+    let chatHistory = [{
+        role: "model",
+        parts: [{ text: "Привіт! Я AI-ассистент F17 Media. Допоможу підібрати систему відеоконтенту під твої завдання і розрахувати точну вартість. Розкажи, чим займається твій бізнес і яка твоя ціль?" }]
+    }];
+
+    async function sendMessage() {
+        const input = document.getElementById('userInput');
+        const text = input.value.trim();
+        if (!text) return;
+
+        appendMessage(text, 'user');
+        input.value = '';
+        chatHistory.push({ role: "user", parts: [{ text: text }] });
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ history: chatHistory })
+            });
+            const data = await response.json();
+            
+            if (data.reply) {
+                appendMessage(data.reply, 'ai');
+                chatHistory.push({ role: "model", parts: [{ text: data.reply }] });
+
+                if (data.reply.toLowerCase().includes('whatsapp')) {
+                    showWhatsAppButton();
+                }
+            } else {
+                appendMessage('Виникла помилка звʼязку.', 'ai');
+            }
+        } catch (e) {
+            appendMessage('Помилка сервера.', 'ai');
+        }
+    }
+
+    function appendMessage(text, sender) {
+        const messagesDiv = document.getElementById('chatMessages');
+        const msg = document.createElement('div');
+        msg.className = `message ${sender}`;
+        msg.innerText = text;
+        messagesDiv.appendChild(msg);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function showWhatsAppButton() {
+        const messagesDiv = document.getElementById('chatMessages');
+        const btn = document.createElement('a');
+        btn.href = "https://wa.me/44XXXXXXXXXX?text=Привіт! Я пройшов розрахунок на сайті, хочу обговорити деталі.";
+        btn.className = "whatsapp-btn";
+        btn.target = "_blank";
+        btn.innerText = "💬 Продовжити розмову у WhatsApp";
+        messagesDiv.appendChild(btn);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+</script>
+
+</body>
+</html>
