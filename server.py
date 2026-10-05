@@ -1,6 +1,7 @@
 import os
 from flask import Flask, request, jsonify, render_template
 from google import genai
+from google.genai import types
 
 app = Flask(__name__, template_folder='.')
 
@@ -38,12 +39,12 @@ def chat():
 
     try:
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-2.5-flash',
             contents=formatted_contents,
-            config={
-                'system_instruction': SYSTEM_PROMPT,
-                'temperature': 0.7,
-            }
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                temperature=0.7,
+            )
         )
         return jsonify({"reply": response.text})
     except Exception as e:
