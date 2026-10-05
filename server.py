@@ -1,11 +1,12 @@
 import os
+import traceback
 from flask import Flask, request, jsonify, render_template
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 app = Flask(__name__, template_folder='.')
 
-client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+# Инициализация стабильного SDK
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 SYSTEM_PROMPT = """
 Ты — вежливый и экспертный AI-продавец агентства F17 Media. Твоя задача — общаться с потенциальным клиентом, узнать его нишу и задачи, сориентировать по пакетам и предложить перешагнуть в WhatsApp для бронирования созвона.
@@ -21,6 +22,16 @@ SYSTEM_PROMPT = """
 - Когда поймешь задачу клиента, назови ориентир по цене и обязательно скажи: «Чтобы зафиксировать условия и обсудить детали, давай перейдем в WhatsApp» (упомяни слово WhatsApp, чтобы в интерфейсе появилась кнопка).
 """
 
+generation_config = {
+    "temperature": 0.7,
+}
+
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    generation_config=generation_config,
+    system_instruction=SYSTEM_PROMPT
+)
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -31,7 +42,7 @@ def chat():
         data = request.json
         history = data.get('history', [])
         
-        formatted_contents = []
+        gemini_history = []
         for h in history:
             role = h.get("role", "user")
             if role == "assistant":
@@ -43,24 +54,19 @@ def chat():
             elif "text" in h:
                 text = h["text"]
                 
-            formatted_contents.append(
-                types.Content(
-                    role=role,
-                    parts=[types.Part.from_text(text=text)]
-                )
-            )
+            gemini_history.append({"role": role, "parts": [text]})
 
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=formatted_contents,
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                temperature=0.7,
-            )
-        )
+        chat_session = model.start_chat(history=gemini_history[:-1] if len(gemini_history) > 0 else [])
+        
+        last_message = "Привет"
+        if len(gemini_history) > 0:
+            last_message = gemini_history[-1]["parts"][0]
+
+        response = chat_session.send_message(last_message)
         return jsonify({"reply": response.text})
+        
     except Exception as e:
-        print(f"Error: {str(e)}")
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
