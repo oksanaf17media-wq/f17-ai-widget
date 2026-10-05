@@ -1,16 +1,17 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>F17 Media — Підбір стратегії та розрахунок</title>
+    <title>F17 Media - AI Strategy Assistant</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.js"></script>
     <style>
         body {
-            background-color: #0b0b0b;
-            color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0f1117;
+            color: #f3f4f6;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -18,134 +19,194 @@
         }
         .chat-container {
             width: 100%;
-            max-width: 500px;
-            background: #141414;
-            border: 1px solid #222;
+            max-width: 480px;
+            height: 90vh;
+            background: #181b22;
             border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             display: flex;
             flex-direction: column;
-            height: 80vh;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            overflow: hidden;
+            border: 1px solid #2d333b;
         }
         .chat-header {
-            padding: 20px;
-            border-bottom: 1px solid #222;
-            text-align: center;
-            font-weight: 600;
-            color: #d4af37;
+            background: #21262d;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #30363d;
+        }
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #f0f6fc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-right: 12px;
+            border: 2px solid #58a6ff;
+        }
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .header-info h2 {
+            margin: 0;
+            font-size: 16px;
+            color: #f0f6fc;
+        }
+        .header-info p {
+            margin: 2px 0 0 0;
+            font-size: 12px;
+            color: #8b949e;
         }
         .chat-messages {
             flex: 1;
-            padding: 20px;
+            padding: 16px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
             gap: 12px;
         }
         .message {
+            max-width: 80%;
             padding: 12px 16px;
             border-radius: 12px;
-            max-width: 80%;
-            line-height: 1.4;
             font-size: 14px;
+            line-height: 1.5;
+            word-wrap: break-word;
         }
         .message.user {
-            background: #d4af37;
-            color: #000;
+            background: #238636;
+            color: white;
             align-self: flex-end;
-            font-weight: 500;
+            border-bottom-right-radius: 4px;
         }
-        .message.ai {
-            background: #1f1f1f;
-            color: #fff;
+        .message.assistant {
+            background: #21262d;
+            color: #c9d1d9;
             align-self: flex-start;
-            border: 1px solid #333;
+            border-bottom-left-radius: 4px;
+            border: 1px solid #30363d;
         }
-        .message.typing {
-            background: #1f1f1f;
-            color: #888;
+        .typing-indicator {
+            display: none;
             align-self: flex-start;
-            border: 1px solid #333;
+            background: #21262d;
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            font-size: 13px;
             font-style: italic;
         }
         .chat-input-area {
-            padding: 15px;
-            border-top: 1px solid #222;
+            padding: 16px;
+            background: #21262d;
+            border-top: 1px solid #30363d;
             display: flex;
-            gap: 10px;
+            gap: 8px;
         }
-        input {
+        .chat-input-area input {
             flex: 1;
-            background: #1f1f1f;
-            border: 1px solid #333;
+            background: #0f1117;
+            border: 1px solid #30363d;
             border-radius: 8px;
-            padding: 12px;
-            color: #fff;
+            padding: 10px 14px;
+            color: white;
             font-size: 14px;
             outline: none;
         }
-        input:focus {
-            border-color: #d4af37;
+        .chat-input-area input:focus {
+            border-color: #58a6ff;
         }
-        button {
-            background: #d4af37;
-            color: #000;
+        .chat-input-area button {
+            background: #238636;
+            color: white;
             border: none;
-            padding: 0 20px;
             border-radius: 8px;
-            font-weight: 600;
+            padding: 0 16px;
+            font-weight: bold;
             cursor: pointer;
-            transition: opacity 0.2s;
+            transition: background 0.2s;
         }
-        button:hover {
-            opacity: 0.9;
+        .chat-input-area button:hover {
+            background: #2ea043;
         }
         .whatsapp-btn {
-            display: block;
-            margin-top: 10px;
-            background: #25D366;
-            color: #fff;
-            text-align: center;
-            padding: 10px;
-            border-radius: 8px;
+            display: inline-block;
+            margin-top: 8px;
+            background: #25d366;
+            color: white;
+            padding: 8px 14px;
+            border-radius: 6px;
             text-decoration: none;
-            font-weight: 600;
-            font-size: 14px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .whatsapp-btn:hover {
+            background: #20ba5a;
         }
     </style>
 </head>
 <body>
 
 <div class="chat-container">
-    <div class="chat-header">F17 Media AI — Підбір рішення</div>
-    <div class="chat-messages" id="chatMessages">
-        <div class="message ai">Привіт! Я AI-ассистент F17 Media. Допоможу підібрати систему відеоконтенту під твої завдання і розрахувати точну вартість. Розкажи, чим займається твій бізнес і яка твоя ціль?</div>
+    <div class="chat-header">
+        <div class="avatar">
+            <!-- Красивая премиальная иконка или фото для ассистента -->
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces" alt="Oksana's AI Assistant">
+        </div>
+        <div class="header-info">
+            <h2>Oksana's AI Assistant</h2>
+            <p>F17 Media Strategy Expert</p>
+        </div>
     </div>
+
+    <div class="chat-messages" id="chatMessages">
+        <div class="message assistant">
+            Hello! I'm Oksana's AI strategy assistant at F17 Media. What is your business niche, and what are your main goals for social media right now?
+        </div>
+    </div>
+
+    <div class="typing-indicator" id="typingIndicator">
+        Oksana's AI is thinking...
+    </div>
+
     <div class="chat-input-area">
-        <input type="text" id="userInput" placeholder="Напиши відповідь..." onkeydown="if(event.key==='Enter') sendMessage()">
-        <button onclick="sendMessage()">Надіслати</button>
+        <input type="text" id="userInput" placeholder="Type your message..." autofocus>
+        <button onclick="sendMessage()">Send</button>
     </div>
 </div>
 
 <script>
-    let chatHistory = [{
-        role: "model",
-        parts: [{ text: "Привіт! Я AI-ассистент F17 Media. Допоможу підібрати систему відеоконтенту під твої завдання і розрахувати точну вартість. Розкажи, чим займається твій бізнес і яка твоя ціль?" }]
-    }];
+    const messagesContainer = document.getElementById('chatMessages');
+    const userInput = document.getElementById('userInput');
+    const typingIndicator = document.getElementById('typingIndicator');
+
+    let chatHistory = [
+        { role: "assistant", parts: [{ text: "Hello! I'm Oksana's AI strategy assistant at F17 Media. What is your business niche, and what are your main goals for social media right now?" }] }
+    ];
+
+    userInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
 
     async function sendMessage() {
-        const input = document.getElementById('userInput');
-        const text = input.value.trim();
+        const text = userInput.value.trim();
         if (!text) return;
 
-        // 1. Показываем сообщение пользователя
-        appendMessage(text, 'user');
-        input.value = '';
+        appendMessage('user', text);
         chatHistory.push({ role: "user", parts: [{ text: text }] });
+        userInput.value = '';
 
-        // 2. Мгновенно выводим статус «Печатает...», пока сервер просыпается
-        const typingId = 'typing-' + Date.now();
-        appendTypingMessage("⏳ Аналізую задачу та готую відповідь...", typingId);
+        typingIndicator.style.display = 'block';
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
         try {
             const response = await fetch('/api/chat', {
@@ -153,62 +214,48 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ history: chatHistory })
             });
+
             const data = await response.json();
-            
-            // Убираем плашку «Печатает...»
-            removeMessage(typingId);
+            typingIndicator.style.display = 'none';
 
             if (data.reply) {
-                appendMessage(data.reply, 'ai');
-                chatHistory.push({ role: "model", parts: [{ text: data.reply }] });
-
-                if (data.reply.toLowerCase().includes('whatsapp')) {
-                    showWhatsAppButton();
+                let replyText = data.reply;
+                
+                // Автоматически превращаем упоминание WhatsApp в красивую кнопку со ссылкой
+                if (replyText.toLowerCase().includes('whatsapp')) {
+                    replyText = replyText.replace(/whatsapp/gi, '<br><br><a href="https://wa.me/YOUR_PHONE_NUMBER" target="_blank" class="whatsapp-btn">💬 Continue in WhatsApp</a>');
                 }
-            } else {
-                appendMessage('Виникла помилка звʼязку.', 'ai');
+
+                appendMessage('assistant', replyText, true);
+                chatHistory.push({ role: "assistant", parts: [{ text: data.reply }] });
+            } else if (data.error) {
+                appendMessage('assistant', 'Sorry, an error occurred. Please try again.');
             }
-        } catch (e) {
-            removeMessage(typingId);
-            appendMessage('Помилка сервера. Спробуйте ще раз.', 'ai');
+        } catch (err) {
+            typingIndicator.style.display = 'none';
+            appendMessage('assistant', 'Connection error. Please check your network.');
         }
     }
 
-    function appendMessage(text, sender) {
-        const messagesDiv = document.getElementById('chatMessages');
-        const msg = document.createElement('div');
-        msg.className = `message ${sender}`;
-        msg.innerText = text;
-        messagesDiv.appendChild(msg);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    function appendTypingMessage(text, id) {
-        const messagesDiv = document.getElementById('chatMessages');
-        const msg = document.createElement('div');
-        msg.className = 'message typing';
-        msg.id = id;
-        msg.innerText = text;
-        messagesDiv.appendChild(msg);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    function removeMessage(id) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.remove();
+    function appendMessage(role, text, isHtml = false) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${role}`;
+        
+        if (isHtml) {
+            // Рендерим Markdown если нужно или оставляем HTML для кнопки
+            msgDiv.innerHTML = marked.parse(text);
+            // На всякий случай обрабатываем ссылки в тексте ответа
+            msgDiv.querySelectorAll('a').forEach(a => {
+                if(!a.classList.contains('whatsapp-btn')) {
+                    a.target = '_blank';
+                }
+            });
+        } else {
+            msgDiv.textContent = text;
         }
-    }
 
-    function showWhatsAppButton() {
-        const messagesDiv = document.getElementById('chatMessages');
-        const btn = document.createElement('a');
-        btn.href = "https://wa.me/44XXXXXXXXXX?text=Привіт! Я пройшов розрахунок на сайті, хочу обговорити деталі.";
-        btn.className = "whatsapp-btn";
-        btn.target = "_blank";
-        btn.innerText = "💬 Продовжити розмову у WhatsApp";
-        messagesDiv.appendChild(btn);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        messagesContainer.appendChild(msgDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 </script>
 
