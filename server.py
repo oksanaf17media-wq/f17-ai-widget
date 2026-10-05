@@ -5,7 +5,13 @@ from google import genai
 from google.genai import types
 
 app = Flask(__name__, template_folder='.')
-client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+client = genai.Client(
+    api_key=os.environ.get("GEMINI_API_KEY"),
+    http_options=types.HttpOptions(
+        timeout=15000,
+        retry_options=types.HttpRetryOptions(attempts=1),
+    ),
+)
 
 SYSTEM_PROMPT = """
 Ты — вежливый и экспертный AI-продавец агентства F17 Media. Твоя задача — общаться с потенциальным клиентом, узнать его нишу и задачи, сориентировать по пакетам и предложить перешагнуть в WhatsApp для бронирования созвона.
@@ -21,8 +27,32 @@ SYSTEM_PROMPT = """
 - Когда поймешь задачу клиента, назови ориентир по цене и обязательно скажи: «Чтобы зафиксировать условия и обсудить детали, давай перейдем в WhatsApp» (упомяни слово WhatsApp, чтобы в интерфейсе появилась кнопка).
 """
 
-MODEL_NAME = "gemini-3.8-flash"
+import time
 
+MODELS = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-flash-lite-latest"]
+
+def ask_gemini(contents):
+    config = types.GenerateContentConfig(
+        system_instruction=SYSTEM_PROMPT,
+        temperature=0.7,
+    )
+    last_error = None
+    for model_name in MODELS:
+        for attempt in range(2):
+            try:
+                r = client.models.generate_content(
+                    model=model_name, contents=contents, config=config
+                )
+                return r.text
+            except Exception as e:
+                last_error = e
+                msg = str(e)
+                print("MODEL FAIL:", model_name, msg[:200])
+                if "503" in msg or "429" in msg or "UNAVAILABLE" in msg:
+                    time.sleep(1.5)
+                    continue
+                break
+    raise last_error
 @app.route('/')
 def index():
     return render_template('index.html')
