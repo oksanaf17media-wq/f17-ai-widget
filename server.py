@@ -1,10 +1,12 @@
 import os
+import time
 import traceback
 from flask import Flask, request, jsonify, render_template
 from google import genai
 from google.genai import types
 
 app = Flask(__name__, template_folder='.')
+
 client = genai.Client(
     api_key=os.environ.get("GEMINI_API_KEY"),
     http_options=types.HttpOptions(
@@ -27,9 +29,8 @@ SYSTEM_PROMPT = """
 - Когда поймешь задачу клиента, назови ориентир по цене и обязательно скажи: «Чтобы зафиксировать условия и обсудить детали, давай перейдем в WhatsApp» (упомяни слово WhatsApp, чтобы в интерфейсе появилась кнопка).
 """
 
-import time
-
 MODELS = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-flash-lite-latest"]
+
 
 def ask_gemini(contents):
     config = types.GenerateContentConfig(
@@ -53,9 +54,20 @@ def ask_gemini(contents):
                     continue
                 break
     raise last_error
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
+
+@app.route('/test')
+def test():
+    try:
+        return "OK: " + ask_gemini("Say hi")
+    except Exception as e:
+        return "ERROR: " + str(e), 500
+
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
@@ -85,19 +97,12 @@ def chat():
         if not contents:
             contents = [types.Content(role="user", parts=[types.Part(text="Привіт")])]
 
-        response = client.models.generate_content(
-            model=MODEL_NAME,
-            contents=contents,
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                temperature=0.7,
-            ),
-        )
-        return jsonify({"reply": response.text})
+        return jsonify({"reply": ask_gemini(contents)})
 
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
