@@ -102,7 +102,7 @@ def chat():
         while contents and contents[-1].role == "model":
             contents.pop()
         if not contents:
-            contents = [types.Content(role="user", parts=[types.Part(text="Привіт")])]
+            contents = [types.Content(role="user", parts=[types.Part(text="Hello")])]
 
         return jsonify({"reply": ask_gemini(contents)})
 
