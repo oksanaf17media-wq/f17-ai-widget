@@ -27,17 +27,29 @@ def index():
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    data = request.json
-    history = data.get('history', [])
-    
-    formatted_contents = []
-    for h in history:
-        formatted_contents.append({
-            "role": h["role"],
-            "parts": [{"text": h["parts"][0]["text"]}]
-        })
-
     try:
+        data = request.json
+        history = data.get('history', [])
+        
+        formatted_contents = []
+        for h in history:
+            role = h.get("role", "user")
+            if role == "assistant":
+                role = "model"
+            
+            text = ""
+            if "parts" in h and len(h["parts"]) > 0:
+                text = h["parts"][0].get("text", "")
+            elif "text" in h:
+                text = h["text"]
+                
+            formatted_contents.append(
+                types.Content(
+                    role=role,
+                    parts=[types.Part.from_text(text=text)]
+                )
+            )
+
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=formatted_contents,
@@ -48,6 +60,7 @@ def chat():
         )
         return jsonify({"reply": response.text})
     except Exception as e:
+        print(f"Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
