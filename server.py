@@ -1,108 +1,83 @@
 import os
-import time
 import traceback
 from flask import Flask, request, jsonify, render_template
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 app = Flask(__name__, template_folder='.')
 
-client = genai.Client(
-    api_key=os.environ.get("GEMINI_API_KEY"),
-    http_options=types.HttpOptions(
-        timeout=15000,
-        retry_options=types.HttpRetryOptions(attempts=1),
-    ),
-)
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 SYSTEM_PROMPT = """
-Ты — вежливый и экспертный AI-продавец агентства F17 Media. Твоя задача — общаться с потенциальным клиентом, узнать его нишу и задачи, сориентировать по пакетам и предложить перешагнуть в WhatsApp для бронирования созвона.
+You are an elite, insightful AI sales strategist for the UK creative agency F17 Media (founded by Oksana). Your goal is to guide the user through a warm, consultative dialogue (asking one question at a time), understand their business and goals, build a tailored solution, and transition them to WhatsApp to get their exact pricing calculation and a free 30-minute personal content strategy from Oksana.
 
-Твои продукты и цены:
-1. Launch Pack (Только видео): 6 готовых роликов под ключ — £790 разово.
-2. Momentum Pack: Видео на постоянную основе (регулярный контент) — рассчитывается индивидуально под объем.
-3. Full Funnel (Полная система): Видео + воронка под ключ + запуск рекламы — от £1780 разово + £350–400/мес ведение.
+CRITICAL LANGUAGE RULE:
+- Default language: British English (professional, warm, polished UK tone).
+- Adaptive language rule: If the user writes to you in Ukrainian, Russian, or any other language, you MUST immediately switch to that language and continue communicating in it naturally, while keeping the high-end agency tone.
 
-Правила диалога:
-- Будь кратким, говори по делу, без «воды» и маркетинговых штампов.
-- Задавай по одному вопросу за раз (сначала ниша и цель, потом объем).
-- Когда поймешь задачу клиента, назови ориентир по цене и обязательно скажи: «Чтобы зафиксировать условия и обсудить детали, давай перейдем в WhatsApp» (упомяни слово WhatsApp, чтобы в интерфейсе появилась кнопка).
+F17 MEDIA SOLUTIONS & PACKAGES ARCHITECTURE:
+1. Launch Packs (One-off boosts):
+   - 5 short videos for brand presence / social maintenance (no deep funnels) — £580.
+   - 5 short videos for lead generation & paid ads (with deep hook/script development, psychological triggers, and persuasive messaging) — £790.
+   - Add-ons: Comprehensive content strategy development and Instagram/Facebook targeted ad setup & launch (+£400).
+2. Momentum Pack (Monthly System):
+   - 10 videos per month + content calendar + research, scripts, filming, editing, and optimization (for steady, long-term social presence).
+3. VIP Full Funnel / Growth & Scaling System:
+   - 12 videos + photo package + full social media management + 1 long-form funnel video + complete customer journey mapping (with lead generation forecasting) + paid ad campaign management (minimum 3-month contract, premium tier around £2,900).
+
+DIALOGUE STRATEGY:
+- NEVER dump prices or packages in the very first message! Be warm, human, conversational, and ALWAYS ask ONLY ONE question at a time.
+- Step 1: Welcome the user, ask about their niche and main goal (social media presence or direct customer acquisition/leads?).
+- Step 2: Ask about the scale and format (a quick one-off push or a consistent monthly system? Do they need high-converting scripts for ads?).
+- Step 3: Ask if they need help with content strategy and running targeted ads on Instagram/Facebook.
+- Step 4: Once you fully understand their needs, DO NOT drop raw prices. Instead, say: "I’ve mapped out the ideal framework for your goals. To lock in your tailored calculation, see our lead generation forecast, and claim your free 30-minute personal content strategy session with Oksana, let's continue in WhatsApp." (Make sure to include the word "WhatsApp" so the button appears!).
 """
 
-MODELS = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-flash-lite-latest"]
+generation_config = {
+    "temperature": 0.7,
+}
 
-
-def ask_gemini(contents):
-    config = types.GenerateContentConfig(
-        system_instruction=SYSTEM_PROMPT,
-        temperature=0.7,
-    )
-    last_error = None
-    for model_name in MODELS:
-        for attempt in range(2):
-            try:
-                r = client.models.generate_content(
-                    model=model_name, contents=contents, config=config
-                )
-                return r.text
-            except Exception as e:
-                last_error = e
-                msg = str(e)
-                print("MODEL FAIL:", model_name, msg[:200])
-                if "503" in msg or "429" in msg or "UNAVAILABLE" in msg:
-                    time.sleep(1.5)
-                    continue
-                break
-    raise last_error
-
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    generation_config=generation_config,
+    system_instruction=SYSTEM_PROMPT
+)
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-
-@app.route('/test')
-def test():
-    try:
-        return "OK: " + ask_gemini("Say hi")
-    except Exception as e:
-        return "ERROR: " + str(e), 500
-
-
 @app.route('/api/chat', methods=['POST'])
 def chat():
     try:
-        data = request.json or {}
+        data = request.json
         history = data.get('history', [])
-
-        contents = []
+        
+        gemini_history = []
         for h in history:
-            role = "model" if h.get("role") == "assistant" else h.get("role", "user")
-            if role not in ("user", "model"):
-                role = "user"
-            if h.get("parts"):
-                p = h["parts"][0]
-                text = p.get("text", "") if isinstance(p, dict) else str(p)
-            else:
-                text = h.get("text", "")
-            if not text.strip():
-                continue
-            contents.append(types.Content(role=role, parts=[types.Part(text=text)]))
+            role = h.get("role", "user")
+            if role == "assistant":
+                role = "model"
+            
+            text = ""
+            if "parts" in h and len(h["parts"]) > 0:
+                text = h["parts"][0].get("text", "")
+            elif "text" in h:
+                text = h["text"]
+                
+            gemini_history.append({"role": role, "parts": [text]})
 
-        # история должна начинаться с user и заканчиваться user
-        while contents and contents[0].role == "model":
-            contents.pop(0)
-        while contents and contents[-1].role == "model":
-            contents.pop()
-        if not contents:
-            contents = [types.Content(role="user", parts=[types.Part(text="Привіт")])]
+        chat_session = model.start_chat(history=gemini_history[:-1] if len(gemini_history) > 0 else [])
+        
+        last_message = "Hello"
+        if len(gemini_history) > 0:
+            last_message = gemini_history[-1]["parts"][0]
 
-        return jsonify({"reply": ask_gemini(contents)})
-
+        response = chat_session.send_message(last_message)
+        return jsonify({"reply": response.text})
+        
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+    app.run(host='0.0.0.0', port=5000)
