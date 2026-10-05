@@ -37,7 +37,8 @@ DIALOGUE FLOW:
 - Step 4: Say: "I highly recommend booking a strategy session with our founder and marketer, Oksana. She will personally form your custom content strategy and give you direct recommendations. To lock this in, let's continue in WhatsApp." (Make sure to include the word "WhatsApp").
 """
 
-MODELS = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-flash-lite-latest"]
+# Используем проверенные стабильные идентификаторы моделей для google-genai
+MODELS = ["gemini-1.5-flash", "gemini-flash"]
 
 def ask_gemini(contents):
     config = types.GenerateContentConfig(
@@ -56,7 +57,7 @@ def ask_gemini(contents):
                 last_error = e
                 msg = str(e)
                 print("MODEL FAIL:", model_name, msg[:200])
-                if "503" in msg or "429" in msg or "UNAVAILABLE" in msg:
+                if "503" in msg or "429" in msg or "UNAVAILABLE" in msg or "not found" in msg.lower():
                     time.sleep(1.5)
                     continue
                 break
