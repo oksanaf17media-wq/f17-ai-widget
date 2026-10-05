@@ -1,2 +1,2 @@
-flask
-google-genai
+Flask
+google-generativeai
