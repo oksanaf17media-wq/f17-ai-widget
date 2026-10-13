@@ -37,7 +37,7 @@ DIALOGUE FLOW:
 - Step 4: Say: "I highly recommend booking a strategy session with our founder and marketer, Oksana. She will personally form your custom content strategy and give you direct recommendations. To lock this in, let's continue in WhatsApp." (Make sure to include the word "WhatsApp").
 """
 
-MODELS = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-1.5-flash"]
+MODELS = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-flash-lite-latest"]
 
 
 def ask_gemini(contents):
