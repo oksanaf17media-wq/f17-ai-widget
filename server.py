@@ -45,23 +45,19 @@ def ask_gemini(contents):
         system_instruction=SYSTEM_PROMPT,
         temperature=0.3,
     )
-    last_error = None
+    errors = []
     for model_name in MODELS:
-        for attempt in range(2):
-            try:
-                r = client.models.generate_content(
-                    model=model_name, contents=contents, config=config
-                )
-                return r.text
-            except Exception as e:
-                last_error = e
-                msg = str(e)
-                print("MODEL FAIL:", model_name, msg[:200])
-                if "503" in msg or "429" in msg or "UNAVAILABLE" in msg or "not found" in msg.lower():
-                    time.sleep(1.5)
-                    continue
-                break
-    raise last_error
+        try:
+            r = client.models.generate_content(
+                model=model_name, contents=contents, config=config
+            )
+            return r.text
+        except Exception as e:
+            msg = str(e)
+            errors.append(model_name + " -> " + msg[:300])
+            print("MODEL FAIL:", model_name, msg[:300], flush=True)
+            time.sleep(1)
+    raise Exception(" || ".join(errors))
 
 
 @app.route('/')
